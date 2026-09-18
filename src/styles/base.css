@@ -1,0 +1,197 @@
+/* =============================================================================
+   Base layer — reset, page shell, typography primitives, shared atoms.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: auto; /* Lenis owns scrolling */
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--silver);
+  font-family: var(--sans);
+  font-size: var(--t-body);
+  font-weight: 350;
+  line-height: 1.55;
+  font-variation-settings: 'wdth' 100;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+body[data-locked='true'] { overflow: hidden; }
+
+img, svg { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+::selection { background: var(--index); color: var(--white); }
+
+:focus-visible {
+  outline: 1px solid var(--coat-cyan);
+  outline-offset: 3px;
+}
+
+/* --- Type primitives ------------------------------------------------------ */
+
+.display {
+  font-family: var(--serif);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.022em;
+  font-variation-settings: 'opsz' 96;
+  text-wrap: balance;
+  margin: 0;
+}
+.display em {
+  font-style: italic;
+  font-variation-settings: 'opsz' 96;
+}
+
+.t-mega { font-size: var(--t-mega); }
+.t-xl   { font-size: var(--t-xl); }
+.t-lg   { font-size: var(--t-lg); }
+.t-md   { font-size: var(--t-md); line-height: 1.08; letter-spacing: -0.012em; }
+
+/* Interface microcopy: labels, specs, captions, meta, commerce.
+   Uppercase at this size needs weight and tracking to stay sharp; 500 with
+   0.1em reads as deliberate where 400 with 0.14em read as thin. */
+.label {
+  font-family: var(--ui);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--ash);
+  font-feature-settings: 'tnum' 1, 'cv05' 1;
+}
+.label-sm { font-size: var(--t-micro); letter-spacing: 0.12em; }
+.num {
+  font-family: var(--ui);
+  font-weight: 500;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.lede {
+  font-size: clamp(1rem, 1.35vw, 1.25rem);
+  line-height: 1.6;
+  color: var(--ash);
+  max-width: 46ch;
+  margin: 0;
+  font-weight: 350;
+}
+
+.prose { max-width: 52ch; color: var(--ash); margin: 0; }
+.prose + .prose { margin-top: 1.1em; }
+.prose strong { color: var(--silver); font-weight: 500; }
+
+/* --- Layout atoms --------------------------------------------------------- */
+
+.shell {
+  position: relative;
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.grid12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--col-gap);
+}
+
+/* A section that scrolls over the fixed 3D canvas. */
+.chapter {
+  position: relative;
+  z-index: var(--z-content);
+}
+
+/* Hairline rule with an optional index tick at its left end. */
+.rule {
+  height: 1px;
+  background: var(--rule);
+  border: 0;
+  margin: 0;
+  width: 100%;
+}
+.rule--tick { position: relative; }
+.rule--tick::before {
+  content: '';
+  position: absolute;
+  left: 0; top: -3px;
+  width: 1px; height: 7px;
+  background: var(--rule-strong);
+}
+
+/* Eyebrow: label + hairline that fills the remaining width. */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.eyebrow::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/* --- Reveal animation (driven by IntersectionObserver in useReveal) -------- */
+
+[data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  transition:
+    opacity var(--d-slow) var(--e-out),
+    transform var(--d-slow) var(--e-out);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+[data-reveal='in'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* A word/line mask reveal for display type. */
+.mask-line { display: block; overflow: hidden; padding-bottom: 0.06em; }
+.mask-line > span {
+  display: block;
+  transform: translate3d(0, 105%, 0);
+  transition: transform 1.25s var(--e-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+[data-reveal='in'] .mask-line > span,
+.mask-line[data-reveal='in'] > span { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .mask-line > span { transform: none; transition: none; }
+}
+:root[data-motion='reduced'] [data-reveal] { opacity: 1; transform: none; transition: none; }
+:root[data-motion='reduced'] .mask-line > span { transform: none; transition: none; }
+
+/* --- Skip link ------------------------------------------------------------ */
+.skip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  padding: 0.9rem 1.4rem;
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: var(--t-xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transform: translateY(-120%);
+  transition: transform 200ms var(--e-out);
+}
+.skip:focus { transform: none; }

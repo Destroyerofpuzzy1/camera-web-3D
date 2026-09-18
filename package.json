@@ -1,0 +1,29 @@
+{
+  "name": "frame-01",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "model": "node scripts/repair-model.mjs && gltf-transform meshopt assets/camera_master.repaired.glb public/models/camera-01.glb --level medium",
+    "plates": "node scripts/build-plates.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "gsap": "^3.13.0",
+    "lenis": "^1.3.11",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.170.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@gltf-transform/cli": "^4.5.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "sharp": "^0.35.4",
+    "vite": "^6.3.6"
+  }
+}

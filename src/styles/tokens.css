@@ -1,0 +1,90 @@
+/* =============================================================================
+   FRAME / 01 — design tokens
+   One place to retune the whole visual system.
+   Palette logic: a graphite value ladder carries the page; the only chromatic
+   accents are (a) the vermilion that physically exists on the camera's mount
+   alignment dot, and (b) lens-coating hues, which are reserved for glass,
+   hairlines and optical graphics. Nothing else is allowed to be colourful.
+   ========================================================================== */
+
+:root {
+  /* --- Value ladder (dark) ------------------------------------------------ */
+  --ink:          #08090b;   /* page base — blue-shifted near-black */
+  --ink-2:        #0b0d10;
+  --graphite:     #14171b;
+  --graphite-2:   #1d2126;
+  --graphite-3:   #262b31;
+  --steel:        #555c65;
+  --ash:          #878e97;
+  --silver:       #d3d8de;
+  --white:        #f3f5f6;
+
+  /* --- Light inversion (used by §4 and §8) -------------------------------- */
+  --paper:        #e7e8e5;   /* neutral warm-grey, deliberately not cream */
+  --paper-2:      #dcdeda;
+  --paper-rule:   #c2c5bf;
+  --paper-ink:    #0e1013;
+  --paper-ash:    #61666b;
+
+  /* --- Optical coatings (glass + hairlines only) -------------------------- */
+  --coat-green:   #5c8f78;
+  --coat-cyan:    #5e93a3;
+  --coat-violet:  #7b6fa0;
+
+  /* --- Index mark: sampled from the model's own alignment dot ------------- */
+  --index:        #b4442e;
+
+  /* --- Hairlines ---------------------------------------------------------- */
+  --rule:         rgba(211, 216, 222, 0.13);
+  --rule-strong:  rgba(211, 216, 222, 0.26);
+  --rule-faint:   rgba(211, 216, 222, 0.07);
+
+  /* --- Type --------------------------------------------------------------- */
+  --serif:  'Bodoni Moda', 'Didot', 'Bodoni MT', Georgia, serif;
+  --sans:   'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  /* Interface, labels, specs, data. A neo-grotesk rather than a mono: it holds
+     its weight at 10px, sets tight, and has tabular figures for the spec
+     columns and the exposure read-out. */
+  --ui:     'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  /* Display scale — fluid, tuned so the didone hairlines stay visible.       */
+  /* Sized so the longest statement line clears twelve columns at the capped
+     shell width. Going larger overflows before the vw term stops growing. */
+  --t-mega:   clamp(2.5rem, 8.7vw, 8.6rem);
+  --t-xl:     clamp(2.6rem, 7.4vw, 7.4rem);
+  --t-lg:     clamp(2rem, 4.6vw, 4.4rem);
+  --t-md:     clamp(1.5rem, 2.6vw, 2.5rem);
+  --t-body:   clamp(0.95rem, 1.05vw, 1.075rem);
+  --t-sm:     0.8125rem;
+  --t-xs:     0.6875rem;
+  --t-micro:  0.625rem;
+
+  /* --- Rhythm ------------------------------------------------------------- */
+  --gutter:   clamp(1.25rem, 4vw, 3.75rem);
+  --col-gap:  clamp(0.75rem, 1.6vw, 1.5rem);
+  --sec-pad:  clamp(6rem, 14vh, 11rem);
+  --maxw:     96rem;
+  --crop:     clamp(10px, 1.5vw, 20px);
+
+  /* --- Motion ------------------------------------------------------------- */
+  --e-out:    cubic-bezier(0.16, 1, 0.3, 1);      /* expo-out: the house curve */
+  --e-inout:  cubic-bezier(0.76, 0, 0.24, 1);
+  --e-soft:   cubic-bezier(0.33, 1, 0.68, 1);
+  --d-fast:   240ms;
+  --d-base:   560ms;
+  --d-slow:   1100ms;
+
+  --z-canvas: 0;
+  --z-gate:   2;
+  --z-content:3;
+  --z-hud:    6;
+  --z-nav:    8;
+  --z-drawer: 20;
+}
+
+/* Reduced-motion consumers read this flag rather than re-querying the OS.     */
+:root[data-motion='reduced'] {
+  --d-fast: 1ms;
+  --d-base: 1ms;
+  --d-slow: 1ms;
+}

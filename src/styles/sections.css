@@ -1,0 +1,843 @@
+/* =============================================================================
+   Sections.
+   Each section owns a prefixed namespace so no two sections can fight over
+   spacing. Shared behaviour lives in the .chapter / .sticky / .matte atoms.
+   ========================================================================== */
+
+/* --- Shared section scaffolding ------------------------------------------- */
+
+.sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+/* Copy always sits above the scrim and the gate. Only the stacking order is
+   set here: touching `position` would fight the sections that place their own
+   children absolutely, and win on specificity. .shell carries its own
+   `position: relative` (base.css) so z-index has something to apply to. */
+.sticky > * { z-index: 3; }
+.sticky > .scrim-side { z-index: 1; }
+.sticky > .gate { z-index: 2; }
+
+/* Film gate. Four mattes forming a hard-edged window onto the 3D layer. The
+   bars are separate elements rather than a clip-path so each edge can be
+   animated independently and the whole thing stays cheap to composite. */
+.gate { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.gate__bar { position: absolute; background: var(--gate-tone, var(--ink)); }
+.gate__bar--t { top: 0; left: 0; right: 0; height: var(--gate-t); }
+.gate__bar--b { bottom: 0; left: 0; right: 0; top: var(--gate-b); }
+.gate__bar--l { top: var(--gate-t); bottom: calc(100% - var(--gate-b)); left: 0; width: var(--gate-l); }
+.gate__bar--r { top: var(--gate-t); bottom: calc(100% - var(--gate-b)); right: 0; left: var(--gate-r); }
+
+/* Hairline around the window, plus corner ticks. */
+.gate__frame {
+  position: absolute;
+  top: var(--gate-t);
+  left: var(--gate-l);
+  right: calc(100% - var(--gate-r));
+  bottom: calc(100% - var(--gate-b));
+  border: 1px solid var(--gate-rule, var(--rule));
+}
+.gate__tick {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 0 solid var(--gate-rule, var(--rule-strong));
+}
+.gate__tick--tl { top: -1px; left: -1px; border-top-width: 1px; border-left-width: 1px; }
+.gate__tick--br { bottom: -1px; right: -1px; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* Editorial plates. They fill the window exactly, so the crop is the gate's
+   and not the image's, and they cross-fade rather than cut when a section
+   changes panel. The stack is what the scroll drift transforms. */
+.gate__plates {
+  position: absolute;
+  top: var(--gate-t);
+  left: var(--gate-l);
+  right: calc(100% - var(--gate-r));
+  bottom: calc(100% - var(--gate-b));
+  overflow: hidden;
+  background: var(--ink-2);
+}
+.on-paper .gate__plates { background: var(--paper-2); }
+.gate__stack {
+  position: absolute;
+  /* Overscan, so the drift never exposes an edge. */
+  inset: -4%;
+  will-change: transform;
+}
+.gate__plate {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  opacity: 0;
+  transition: opacity 900ms var(--e-soft);
+}
+.gate__plate[data-on='true'] { opacity: 1; }
+:root[data-motion='reduced'] .gate__stack { transform: none !important; }
+:root[data-motion='reduced'] .gate__plate { transition: none; }
+
+/* Directional falloff on the type side of a sticky chapter. */
+.scrim-side {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Paper mode: everything inside inverts. */
+.on-paper { color: var(--paper-ink); }
+.on-paper .label { color: var(--paper-ash); }
+.on-paper .lede,
+.on-paper .prose { color: var(--paper-ash); }
+.on-paper .prose strong { color: var(--paper-ink); }
+.on-paper .rule { background: var(--paper-rule); }
+.on-paper .eyebrow::after { background: var(--paper-rule); }
+
+/* Callouts pinned to the 3D model. A soft shadow keeps the label readable
+   wherever on the object it happens to land. */
+.callout {
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.75);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-content);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 700ms var(--e-soft);
+  will-change: transform;
+}
+.callout[data-on='true'] { opacity: 1; }
+.callout__dot {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: 1px solid var(--silver);
+}
+.callout__dot::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  background: var(--index);
+}
+.callout__leader {
+  position: absolute;
+  top: 0;
+  height: 1px;
+  background: var(--rule-strong);
+}
+.callout__body {
+  position: absolute;
+  bottom: 6px;
+  white-space: nowrap;
+}
+.callout--right .callout__leader { left: 0; width: var(--leader, 56px); }
+.callout--right .callout__body { left: var(--leader, 56px); padding-left: 0.6rem; }
+.callout--left .callout__leader { right: 0; width: var(--leader, 56px); }
+.callout--left .callout__body { right: var(--leader, 56px); padding-right: 0.6rem; text-align: right; }
+.callout__t {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--white);
+  line-height: 1.25;
+}
+.callout__d {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--ui);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ash);
+  line-height: 1.3;
+}
+.on-paper-callout { text-shadow: 0 1px 12px rgba(231, 232, 229, 0.9); }
+.on-paper-callout .callout__t { color: var(--paper-ink); }
+.on-paper-callout .callout__d { color: var(--paper-ash); }
+.on-paper-callout .callout__leader { background: rgba(14, 16, 19, 0.3); }
+.on-paper-callout .callout__dot { border-color: var(--paper-ink); }
+
+/* =============================================================================
+   00 Hero
+   ========================================================================== */
+
+.hero__stick { display: block; }
+
+/* Top band sits under the nav; the floor carries the statement. */
+.hero__top {
+  position: absolute;
+  top: calc(var(--gutter) + 3.6rem);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+}
+.hero__top .eyebrow { flex: 1; max-width: 26rem; }
+
+.hero__scroll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+}
+.hero__scroll span:last-child {
+  font-family: var(--ui);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--steel);
+}
+.hero__scrollline {
+  width: 1px;
+  height: 46px;
+  background: linear-gradient(var(--rule-strong), transparent);
+  position: relative;
+  overflow: hidden;
+}
+.hero__scrollline::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 14px;
+  background: var(--silver);
+  animation: scroll-run 2.6s var(--e-inout) infinite;
+}
+@keyframes scroll-run {
+  0%   { transform: translateY(-14px); opacity: 0; }
+  28%  { opacity: 1; }
+  100% { transform: translateY(46px); opacity: 0; }
+}
+:root[data-motion='reduced'] .hero__scrollline::after { animation: none; opacity: 0.6; }
+
+.hero__floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(6.5rem, 12vh, 8.5rem);
+}
+.hero__statement {
+  font-size: var(--t-mega);
+  margin: 0 0 clamp(1.4rem, 3.4vh, 2.6rem);
+}
+.hero__statement em { font-style: italic; }
+.hero__rule { margin-bottom: 1.2rem; }
+.hero__row { align-items: start; }
+.hero__lede { grid-column: 1 / span 6; max-width: 48ch; }
+.hero__cta {
+  grid-column: 9 / span 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1000px) {
+  .hero__lede { grid-column: 1 / -1; }
+  .hero__cta { grid-column: 1 / -1; justify-content: flex-start; margin-top: 1.5rem; }
+  .hero__top .eyebrow .label-sm { display: none; }
+}
+@media (max-width: 620px) {
+  .hero__scroll { display: none; }
+}
+
+/* =============================================================================
+   01 Silhouette — sticky beats in the right column
+   ========================================================================== */
+
+.sil__col {
+  grid-column: 8 / span 5;
+  position: relative;
+  min-height: 21rem;
+}
+.sil__head { grid-column: 8 / span 5; margin-bottom: 2rem; }
+.sil__beat {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition: opacity 620ms var(--e-out), transform 620ms var(--e-out);
+  pointer-events: none;
+}
+.sil__beat[data-on='true'] { opacity: 1; transform: none; pointer-events: auto; }
+.sil__n {
+  font-family: var(--serif);
+  font-size: clamp(2.6rem, 4vw, 3.6rem);
+  line-height: 1;
+  color: var(--graphite-3);
+  display: block;
+  margin-bottom: 0.7rem;
+}
+.sil__t { font-size: clamp(1.35rem, 2.1vw, 1.9rem); line-height: 1.15; margin: 0 0 0.8rem; font-weight: 400; letter-spacing: -0.01em; color: var(--white); }
+.sil__d { margin: 0 0 1.4rem; color: var(--ash); max-width: 34ch; }
+.sil__spec { border-top: 1px solid var(--rule); padding-top: 0.8rem; }
+
+.sil__progress {
+  grid-column: 8 / span 5;
+  display: flex;
+  gap: 4px;
+  margin-top: 2.4rem;
+}
+.sil__pip { flex: 1; height: 1px; background: var(--rule); position: relative; overflow: hidden; }
+.sil__pip i { position: absolute; inset: 0; background: var(--silver); transform: scaleX(0); transform-origin: left; transition: transform 500ms var(--e-out); }
+.sil__pip[data-on='true'] i { transform: none; }
+
+@media (max-width: 1000px) {
+  .sil__col, .sil__head, .sil__progress { grid-column: 1 / -1; }
+  .sil__stick { align-items: flex-end; }
+  .sil__grid { padding-bottom: clamp(3rem, 8vh, 5rem); }
+}
+
+/* =============================================================================
+   02 Optics
+   ========================================================================== */
+
+.lens__col { grid-column: 1 / span 5; display: flex; flex-direction: column; gap: 1.6rem; }
+.lens__stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--rule);
+}
+.lens__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.62rem 0;
+  border-bottom: 1px solid var(--rule-faint);
+}
+.lens__k { font-family: var(--ui); font-size: var(--t-micro); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--steel); }
+.lens__v { font-family: var(--ui); font-weight: 500; font-size: var(--t-sm); color: var(--silver); }
+
+/* Optical schematic, drawn as SVG from the section cutaway reference. */
+.lens__schematic { width: 100%; height: auto; overflow: visible; }
+.lens__schematic .el { fill: none; stroke: var(--coat-cyan); stroke-width: 0.6; opacity: 0.85; }
+.lens__schematic .el--ld { stroke: var(--coat-green); }
+.lens__schematic .el--fl { stroke: var(--coat-violet); }
+.lens__schematic .axis { stroke: var(--rule-strong); stroke-width: 0.5; stroke-dasharray: 3 3; }
+.lens__schematic .iris { stroke: var(--index); stroke-width: 0.8; fill: none; }
+.lens__schematic .tag { fill: var(--steel); font-family: var(--ui); font-size: 3.4px; letter-spacing: 0.1em; }
+.lens__schematic .bracket { stroke: var(--rule); stroke-width: 0.5; fill: none; }
+
+@media (max-width: 1000px) {
+  .lens__col { grid-column: 1 / -1; }
+  .lens__stick { align-items: flex-end; }
+  .lens__grid { padding-bottom: clamp(3rem, 8vh, 5rem); }
+}
+
+/* =============================================================================
+   03 Sensor — paper inversion, gate window
+   ========================================================================== */
+
+.sensor__col { grid-column: 1 / span 5; display: flex; flex-direction: column; gap: 1.5rem; }
+.sensor__figs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--paper-rule);
+  border: 1px solid var(--paper-rule);
+}
+.sensor__fig { background: var(--paper); padding: 1.1rem 1.2rem; }
+.sensor__n {
+  font-family: var(--serif);
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--paper-ink);
+}
+.sensor__n sub { font-family: var(--ui); font-size: 0.34em; font-weight: 500; letter-spacing: 0.08em; vertical-align: baseline; margin-left: 0.45em; color: var(--paper-ash); }
+.sensor__cap { margin-top: 0.55rem; }
+
+@media (max-width: 1000px) {
+  .sensor__col { grid-column: 1 / -1; }
+  .sensor__stick { align-items: flex-end; }
+  .sensor__grid { padding-bottom: clamp(3rem, 8vh, 5rem); }
+}
+
+/* =============================================================================
+   04 Architecture — exploded
+   ========================================================================== */
+
+/* The legend runs along the floor in the same order as the fan above it, so
+   the two read as one drawing rather than a picture and a key. */
+.exp__legend {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(var(--gutter) + 2.6rem);
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: var(--col-gap);
+  border-top: 1px solid var(--rule);
+  padding-top: 0.85rem;
+}
+.exp__item {
+  opacity: 0.22;
+  transition: opacity 620ms var(--e-soft);
+  position: relative;
+}
+/* A tick above each column, pointing at the part it names. */
+.exp__item::before {
+  content: '';
+  position: absolute;
+  top: -0.85rem;
+  left: 0;
+  width: 1px;
+  height: 7px;
+  background: var(--rule-strong);
+}
+.exp__item[data-on='true'] { opacity: 1; }
+.exp__item[data-on='true']::before { background: var(--index); }
+.exp__no {
+  display: block;
+  font-family: var(--ui);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--index);
+  margin-bottom: 0.4rem;
+}
+.exp__t { display: block; font-size: 0.8125rem; color: var(--silver); line-height: 1.2; }
+.exp__d {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--ui);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--steel);
+  line-height: 1.35;
+}
+
+.exp__head {
+  position: absolute;
+  left: var(--gutter);
+  top: calc(var(--gutter) + 3.6rem);
+  max-width: 34rem;
+}
+
+.exp__count {
+  position: absolute;
+  right: var(--gutter);
+  top: calc(var(--gutter) + 3.6rem);
+  max-width: 20rem;
+  text-align: right;
+}
+
+@media (max-width: 1200px) {
+  .exp__legend { grid-template-columns: repeat(5, minmax(0, 1fr)); row-gap: 1rem; }
+  .exp__item:nth-child(n + 6) { display: none; }
+  .exp__d { display: none; }
+}
+@media (max-width: 1000px) {
+  .exp__legend { display: none; }
+  .exp__head { top: auto; bottom: calc(var(--gutter) + 3rem); max-width: none; right: var(--gutter); }
+  .exp__count { display: none; }
+}
+
+/* =============================================================================
+   05 Handling
+   ========================================================================== */
+
+.hand__col { position: relative; min-height: 18rem; }
+.hand__col--r { grid-column: 8 / span 5; }
+.hand__beat {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition: opacity 600ms var(--e-out), transform 600ms var(--e-out);
+}
+.hand__beat[data-on='true'] { opacity: 1; transform: none; }
+.hand__beat--left { grid-column: 1 / span 5; }
+
+.hand__figures {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(var(--gutter) + 2rem);
+  z-index: var(--z-content);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--col-gap);
+  border-top: 1px solid var(--rule);
+  padding-top: 0.9rem;
+}
+.hand__fig b { display: block; font-family: var(--ui); font-weight: 500; font-size: var(--t-sm); color: var(--silver); }
+
+@media (max-width: 1000px) {
+  .hand__col--r, .hand__beat--left { grid-column: 1 / -1; }
+  .hand__figures { grid-template-columns: repeat(2, 1fr); gap: 0.9rem var(--col-gap); }
+}
+
+/* =============================================================================
+   06 Field notes
+   ========================================================================== */
+
+.gal__panel {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+  transition: opacity 640ms var(--e-out), transform 640ms var(--e-out);
+  pointer-events: none;
+}
+.gal__panel[data-on='true'] { opacity: 1; transform: none; pointer-events: auto; }
+.gal__grid { width: 100%; }
+.gal__body { grid-column: 1 / span 5; }
+.gal__body--r { grid-column: 8 / span 5; }
+.gal__t {
+  font-family: var(--serif);
+  font-size: var(--t-lg);
+  line-height: 0.98;
+  letter-spacing: -0.022em;
+  margin: 1.3rem 0 1.1rem;
+  font-weight: 400;
+  color: var(--white);
+}
+.gal__d { color: var(--ash); max-width: 38ch; margin: 0 0 1.5rem; }
+.gal__meta { display: flex; align-items: center; gap: 0.8rem; }
+.gal__meta::before { content: ''; width: 28px; height: 1px; background: var(--index); }
+
+/* An oversized index numeral, cropped by the viewport edge. */
+.gal__ghost {
+  position: absolute;
+  bottom: -0.22em;
+  font-family: var(--serif);
+  font-size: clamp(9rem, 26vw, 22rem);
+  line-height: 0.7;
+  color: rgba(211, 216, 222, 0.05);
+  pointer-events: none;
+  user-select: none;
+  z-index: -1;
+}
+.gal__ghost--l { left: calc(var(--gutter) * -0.4); }
+.gal__ghost--r { right: calc(var(--gutter) * -0.4); }
+
+@media (max-width: 1000px) {
+  .gal__body, .gal__body--r { grid-column: 1 / -1; }
+  .gal__stick { align-items: flex-end; }
+  .gal__grid { padding-bottom: clamp(3.5rem, 9vh, 5rem); }
+}
+
+/* =============================================================================
+   07 Specification — paper
+   ========================================================================== */
+
+.spec { position: relative; }
+/* Paper matte and its window, pinned for the length of the section. */
+.spec__bg { position: absolute; inset: 0; z-index: 1; }
+.spec__bgsticky { position: sticky; top: 0; height: 100svh; }
+.spec__inner {
+  position: relative;
+  z-index: 2;
+  padding: clamp(5rem, 12vh, 9rem) 0 clamp(4rem, 10vh, 7rem);
+}
+.spec__head { margin-bottom: clamp(3rem, 7vh, 5rem); }
+.spec__title { grid-column: 1 / span 4; }
+.spec__note { grid-column: 5 / span 4; align-self: end; }
+
+.spec__group { border-top: 1px solid var(--paper-rule); padding: 1.5rem 0; }
+.spec__ref {
+  grid-column: 1 / span 2;
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+}
+.spec__glyph {
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 4vw, 3.4rem);
+  line-height: 0.8;
+  letter-spacing: -0.03em;
+  color: var(--paper-ink);
+}
+.spec__rows { grid-column: 3 / span 6; margin: 0; }
+.spec__row {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.5rem 0;
+}
+.spec__row + .spec__row { border-top: 1px solid rgba(14, 16, 19, 0.08); }
+.spec__k { font-family: var(--ui); font-size: var(--t-micro); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--paper-ash); }
+.spec__v { font-size: 0.9375rem; color: var(--paper-ink); margin: 0; }
+
+@media (max-width: 1000px) {
+  .spec__bg { display: none; }
+  .spec { background: var(--paper); }
+  .spec__title, .spec__note { grid-column: 1 / -1; }
+  .spec__note { margin-top: 1.2rem; }
+  .spec__ref { grid-column: 1 / -1; margin-bottom: 0.9rem; }
+  .spec__rows { grid-column: 1 / -1; }
+  .spec__row { grid-template-columns: 1fr; gap: 0.15rem; }
+}
+
+/* =============================================================================
+   08 Order
+   ========================================================================== */
+
+.buy__col { grid-column: 7 / span 6; }
+.buy__box { border: 1px solid var(--rule); background: rgba(14, 17, 21, 0.66); backdrop-filter: blur(18px); }
+.buy__head { padding: 1.7rem clamp(1.4rem, 2.4vw, 2.2rem) 1.4rem; border-bottom: 1px solid var(--rule); }
+.buy__name { font-family: var(--serif); font-size: clamp(2rem, 3.2vw, 2.9rem); line-height: 1; letter-spacing: -0.02em; margin: 0.5rem 0 0.8rem; color: var(--white); }
+.buy__pos { color: var(--ash); max-width: 34ch; margin: 0; font-size: 0.9375rem; }
+.buy__body { padding: 1.5rem clamp(1.4rem, 2.4vw, 2.2rem); display: flex; flex-direction: column; gap: 1.5rem; }
+
+.buy__field > .label { display: block; margin-bottom: 0.7rem; }
+.buy__opts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.buy__opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--rule);
+  text-align: left;
+  transition: border-color var(--d-fast) var(--e-soft), background var(--d-fast) var(--e-soft);
+}
+.buy__opt:hover { border-color: var(--rule-strong); }
+.buy__opt[data-on='true'] { border-color: var(--silver); background: rgba(255, 255, 255, 0.04); }
+.buy__swatch { width: 14px; height: 14px; border-radius: 50%; flex: none; margin-top: 2px; border: 1px solid var(--rule-strong); }
+.buy__optname { display: block; font-size: 0.875rem; color: var(--silver); line-height: 1.25; }
+.buy__optnote { display: block; font-family: var(--ui); font-size: var(--t-micro); font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--steel); margin-top: 0.3rem; }
+.buy__optprice { display: block; font-family: var(--ui); font-weight: 500; font-size: var(--t-xs); color: var(--ash); margin-top: 0.45rem; }
+
+.buy__line { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.buy__price { font-family: var(--ui); font-weight: 500; font-size: 1.5rem; color: var(--white); letter-spacing: -0.01em; }
+.buy__vat { font-family: var(--ui); font-size: var(--t-micro); font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--steel); }
+.buy__actions { display: grid; gap: 0.55rem; }
+
+.buy__points { border-top: 1px solid var(--rule); padding: 1.1rem clamp(1.4rem, 2.4vw, 2.2rem) 1.4rem; display: grid; gap: 0.55rem; }
+.buy__point { display: grid; grid-template-columns: 6.5rem 1fr; gap: 0.9rem; align-items: baseline; }
+.buy__stock { display: inline-flex; align-items: center; gap: 0.5rem; }
+.buy__stock i { width: 5px; height: 5px; background: var(--coat-green); border-radius: 50%; }
+
+@media (max-width: 1000px) {
+  .buy__col { grid-column: 1 / -1; }
+  .buy__opts { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
+   09 Close
+   ========================================================================== */
+
+.close__stick { align-items: flex-end; }
+.close__grid { width: 100%; padding-bottom: clamp(5rem, 12vh, 8rem); }
+.close__statement { grid-column: 1 / span 8; }
+.close__statement .display { font-size: var(--t-xl); }
+.close__aside { grid-column: 9 / span 4; align-self: end; display: flex; flex-direction: column; gap: 1.6rem; }
+.close__cta { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+@media (max-width: 1000px) {
+  .close__statement, .close__aside { grid-column: 1 / -1; }
+  .close__aside { margin-top: 1.6rem; }
+}
+
+/* Registered so the gate edges can be transitioned. Browsers without
+   @property snap instead of sliding, which is an acceptable degradation. */
+@property --gate-t { syntax: '<length-percentage>'; inherits: true; initial-value: 50%; }
+@property --gate-b { syntax: '<length-percentage>'; inherits: true; initial-value: 50%; }
+@property --gate-l { syntax: '<length-percentage>'; inherits: true; initial-value: 50%; }
+@property --gate-r { syntax: '<length-percentage>'; inherits: true; initial-value: 50%; }
+
+.gate {
+  transition:
+    --gate-t 1.15s var(--e-out),
+    --gate-b 1.15s var(--e-out),
+    --gate-l 1.15s var(--e-out) 60ms,
+    --gate-r 1.15s var(--e-out) 60ms;
+}
+:root[data-motion='reduced'] .gate { transition: none; }
+
+/* Optics: the copy column clears for the macro, leaving one line. */
+.lens__grid {
+  transition: opacity 900ms var(--e-out), transform 900ms var(--e-out);
+}
+.lens__grid[data-macro='true'] {
+  opacity: 0;
+  transform: translate3d(-2.5rem, 0, 0);
+  pointer-events: none;
+}
+.lens__coda {
+  position: absolute;
+  left: var(--gutter);
+  bottom: calc(var(--gutter) + 4.5rem);
+  max-width: 26rem;
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition: opacity 900ms var(--e-out) 260ms, transform 900ms var(--e-out) 260ms;
+}
+.lens__coda[data-on='true'] { opacity: 1; transform: none; }
+.lens__coda .display { margin: 0.9rem 0 0; color: var(--white); }
+
+/* Order: the chapter label lives inside the box so the column clears the nav. */
+.buy__eyebrow { margin-bottom: 0.9rem; }
+.buy__head .buy__name { margin-top: 0; }
+.buy__body { gap: 1.25rem; }
+.buy__head { padding-top: 1.4rem; padding-bottom: 1.2rem; }
+
+/* Field notes: the ghost numeral rides just under the copy, cropped by the
+   page edge on whichever side the type is not using. */
+.gal__panel { isolation: isolate; }
+.gal__ghost--l { left: calc(var(--gutter) * -0.35); }
+.gal__ghost--r { right: calc(var(--gutter) * -0.35); }
+
+/* =============================================================================
+   Stacked layout
+   The side-by-side compositions collapse below 1000px: the instrument lifts
+   into the upper third (see PORTRAIT_LIFT in three/Scene.jsx) and the copy
+   takes the floor. Sections without a film gate get a falloff instead, so the
+   type always has a ground to sit on.
+   ========================================================================== */
+
+@media (max-width: 1000px) {
+  .sticky { align-items: flex-end; }
+  .sticky:not(:has(.gate))::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(
+      0deg,
+      var(--ink) 0%,
+      rgba(8, 9, 11, 0.94) 30%,
+      rgba(8, 9, 11, 0.7) 46%,
+      rgba(8, 9, 11, 0) 66%
+    );
+  }
+  .on-paper .sticky:not(:has(.gate))::after {
+    background: linear-gradient(
+      0deg,
+      var(--paper) 0%,
+      rgba(231, 232, 229, 0.94) 30%,
+      rgba(231, 232, 229, 0) 66%
+    );
+  }
+
+  /* Give every stacked chapter the same floor. */
+  .sil__grid,
+  .lens__grid,
+  .sensor__grid,
+  .gal__grid,
+  .hand__grid,
+  .buy__grid,
+  .close__grid {
+    padding-bottom: clamp(5.5rem, 12vh, 7rem);
+  }
+
+  /* Callouts are drawn to a specific part; at this size they land on top of
+     the copy more often than not. The legend and the prose carry the same
+     information, so retire them. */
+  .callout { display: none; }
+
+  /* The order module is taller than the viewport, so it scrolls rather than
+     pinning. */
+  .buy .sticky {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+    padding-top: calc(var(--gutter) + 4rem);
+    padding-bottom: 4rem;
+    align-items: center;
+  }
+  .buy .sticky::after { display: none; }
+  .buy__grid { padding-bottom: 0; }
+  .buy__box { background: rgba(11, 13, 16, 0.9); }
+
+  /* The exploded fan needs the whole width. */
+  .exp__head { max-width: none; }
+}
+
+@media (max-width: 720px) {
+  .hand__figures { bottom: calc(var(--gutter) + 5.5rem); }
+  .gal__ghost { display: none; }
+  .buybar { padding: 0.6rem var(--gutter); gap: 0.75rem; }
+  .buybar__name { font-size: var(--t-micro); }
+  .buybar .btn { padding: 0.65rem 0.9rem; font-size: 9px; letter-spacing: 0.12em; }
+  .buybar__r { gap: 0.7rem; }
+  .buybar__configure { display: none; }
+}
+
+@media (max-width: 1000px) {
+  /* Stacked, each beat already carries its own title, so the chapter
+     statement would just be a second headline fighting for the same space. */
+  .sil__head h2 { display: none; }
+  .sil__head { margin-bottom: 1.2rem; }
+  .sil__col { min-height: 17rem; }
+  .sil__progress { margin-top: 1.4rem; }
+
+  /* Gallery panels align to the floor like every other stacked chapter. */
+  .gal__panel { align-items: flex-end; }
+
+  /* Clear the exposure read-out. */
+  .exp__head { bottom: calc(var(--gutter) + 5.2rem); }
+  .hand__figures { bottom: calc(var(--gutter) + 5.2rem); }
+  .lens__coda { bottom: calc(var(--gutter) + 5.2rem); }
+}
+
+@media (max-width: 1000px) {
+  /* The sensor chapter carries the most copy of any stacked section, so it
+     gets a tighter setting to stay above the floor. */
+  .sensor__col { gap: 1rem; }
+  .sensor__col .display { font-size: var(--t-md); }
+  .sensor__col .prose { font-size: 0.9rem; line-height: 1.5; }
+  .sensor__col .prose + .prose { margin-top: 0.7em; }
+  .sensor__fig { padding: 0.7rem 0.8rem; }
+  .sensor__n { font-size: 1.5rem; }
+  .sensor__cap { margin-top: 0.3rem; }
+
+  .lens__col { gap: 1rem; }
+  .lens__col .display { font-size: var(--t-md); }
+  /* The optical section is the point of this chapter; the stats repeat in the
+     specification, so give the drawing the room instead. */
+  .lens__stats { display: none; }
+  .lens__col .prose:nth-of-type(2) { display: none; }
+
+  .gal__t { font-size: clamp(1.8rem, 8vw, 2.6rem); margin-top: 1rem; }
+  .gal__d { font-size: 0.9rem; }
+}
+
+@media (max-width: 1000px) {
+  /* Stacked, the sensor chapter runs one paragraph shorter and the figures
+     set smaller, so the statement never rides up into the crop. */
+  .sensor__col .prose:nth-of-type(2) { display: none; }
+  .sensor__n { font-size: 1.3rem; }
+  .sensor__fig { padding: 0.6rem 0.7rem; }
+
+  /* The handling figures repeat in the specification, and there is no room for
+     them beside the beat copy at this width. */
+  .hand__figures { display: none; }
+}
+
+/* Order: the module is the tallest block on the page. Tighten its rhythm and
+   sit it a little below centre so the head clears the navigation and the foot
+   clears the exposure read-out. */
+.buy__stick { padding-top: 2.5rem; }
+.buy__head { padding-top: 1.2rem; padding-bottom: 1rem; }
+.buy__name { font-size: clamp(1.8rem, 2.8vw, 2.5rem); margin-bottom: 0.6rem; }
+.buy__body { gap: 1.05rem; padding-top: 1.25rem; padding-bottom: 1.25rem; }
+.buy__opt { padding: 0.72rem 0.85rem; }
+.buy__actions { gap: 0.5rem; }
+.buy__points { padding-top: 0.9rem; padding-bottom: 1.1rem; gap: 0.45rem; }
+.buy__eyebrow { margin-bottom: 0.75rem; }
