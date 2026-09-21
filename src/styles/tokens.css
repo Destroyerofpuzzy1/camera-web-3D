@@ -34,6 +34,12 @@
   /* --- Index mark: sampled from the model's own alignment dot ------------- */
   --index:        #b4442e;
 
+  /* --- RGB glow (set live, per frame, from three/Scene.jsx) ---------------
+     Fallback values here are only what paints before the first WebGL frame —
+     electric cyan, the hero's opening colour. */
+  --glow-r: 0;   --glow-g: 245; --glow-b: 255;
+  --glow2-r: 255; --glow2-g: 10; --glow2-b: 0;
+
   /* --- Hairlines ---------------------------------------------------------- */
   --rule:         rgba(211, 216, 222, 0.13);
   --rule-strong:  rgba(211, 216, 222, 0.26);

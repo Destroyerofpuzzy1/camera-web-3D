@@ -16,28 +16,109 @@
 }
 .stage__canvas { width: 100% !important; height: 100% !important; }
 
+/* --- The colour world ------------------------------------------------------
+   The background is not black with a coloured glow on it. The whole field
+   takes the section's colour, and black is left to do what black is good for:
+   vignette, shadow and depth. Four stacked layers, all driven live from
+   three/Scene.jsx, all changing together with the lights and the fog.
+
+   Alpha over a near-black base is a multiply: cyan at 0.62 lands on roughly
+   rgb(2,150,161), a genuinely saturated teal rather than a tint. The centre
+   is held back deliberately so the graphite body still has something dark to
+   read against.
+   -------------------------------------------------------------------------- */
+
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: var(--ink);
+  background: #060607;
 }
 .backdrop__layer {
   position: absolute;
   inset: 0;
 }
-/* Dark studio: a cold pool of light behind the subject, falling off hard. */
+/* 1. The world itself: a full-bleed wash of the dominant colour, raked across
+      the frame so it has direction rather than sitting flat. */
 .backdrop__dark {
-  background:
-    radial-gradient(78% 58% at 56% 34%, #1b2026 0%, #101418 38%, #08090b 72%),
-    linear-gradient(180deg, #0a0c0f 0%, #06070a 100%);
+  background: linear-gradient(
+    156deg,
+    rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.72) 0%,
+    rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.38) 46%,
+    rgba(var(--glow2-r), var(--glow2-g), var(--glow2-b), 0.34) 100%
+  );
 }
-/* Bright studio, faded in on the same curve the 3D lights use. */
-.backdrop__light {
-  opacity: var(--stage-light, 0);
-  background:
-    radial-gradient(88% 66% at 52% 38%, #f2f3f1 0%, #dfe1dd 46%, #c7cac5 100%);
-  transition: none;
+/* 2. Bloom: a large soft field of pure colour behind the subject. */
+.backdrop__glow {
+  background: radial-gradient(
+    74% 62% at 50% 44%,
+    rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.5) 0%,
+    rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.18) 46%,
+    transparent 74%
+  );
+  mix-blend-mode: screen;
+}
+/* 3. Accent: the opposing colour from one corner, so the frame is never one
+      flat hue and the rim light has something in the room to come from. */
+.backdrop__glow2 {
+  background: radial-gradient(
+    64% 58% at 88% 12%,
+    rgba(var(--glow2-r), var(--glow2-g), var(--glow2-b), 0.42) 0%,
+    rgba(var(--glow2-r), var(--glow2-g), var(--glow2-b), 0.14) 44%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+/* 4. Depth: black returns here and only here, pulling the edges down so the
+      centre of frame stays the brightest thing on screen. */
+.backdrop__depth {
+  background: radial-gradient(
+    104% 86% at 50% 48%,
+    transparent 26%,
+    rgba(0, 0, 0, 0.42) 66%,
+    rgba(0, 0, 0, 0.82) 100%
+  );
+}
+
+/* Portrait viewports are far taller than they are wide, so radials sized in
+   percentages run out of colour long before the bottom of the screen and the
+   world collapses back to black. Stretch them vertically and soften the depth
+   falloff so a phone gets the same full-bleed colour a desktop does. */
+@media (max-width: 760px) {
+  /* The raking wash has to do more work here: on a phone the copy block fills
+     the lower half of the screen, and without this it reads as black. */
+  .backdrop__dark {
+    background: linear-gradient(
+      168deg,
+      rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.78) 0%,
+      rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.46) 44%,
+      rgba(var(--glow2-r), var(--glow2-g), var(--glow2-b), 0.5) 100%
+    );
+  }
+  .backdrop__glow {
+    background: radial-gradient(
+      132% 74% at 50% 38%,
+      rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.54) 0%,
+      rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.24) 52%,
+      transparent 100%
+    );
+  }
+  .backdrop__glow2 {
+    background: radial-gradient(
+      118% 70% at 84% 10%,
+      rgba(var(--glow2-r), var(--glow2-g), var(--glow2-b), 0.46) 0%,
+      rgba(var(--glow2-r), var(--glow2-g), var(--glow2-b), 0.18) 50%,
+      transparent 100%
+    );
+  }
+  .backdrop__depth {
+    background: radial-gradient(
+      128% 104% at 50% 42%,
+      transparent 34%,
+      rgba(0, 0, 0, 0.3) 72%,
+      rgba(0, 0, 0, 0.66) 100%
+    );
+  }
 }
 
 /* Vignette. Keeps the eye centred and stops the edges reading as flat black. */
@@ -46,11 +127,13 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
+  /* Light now: `.backdrop__depth` does most of the edge work. This is only
+     the last bit of falloff over the canvas as well as the backdrop. */
   background: radial-gradient(
-    120% 88% at 50% 46%,
-    transparent 42%,
-    rgba(0, 0, 0, 0.34) 88%,
-    rgba(0, 0, 0, 0.52) 100%
+    124% 92% at 50% 46%,
+    transparent 56%,
+    rgba(0, 0, 0, 0.18) 88%,
+    rgba(0, 0, 0, 0.3) 100%
   );
   mix-blend-mode: multiply;
 }
@@ -477,6 +560,15 @@
   background: var(--ink-2);
   border-top: 1px solid var(--rule);
   padding: clamp(3.5rem, 8vh, 6rem) 0 calc(var(--gutter) + 2.5rem);
+}
+/* One row, no columns — the sequence ends on the close section, not here. */
+.footer--mini {
+  padding: 1.4rem 0;
+}
+.footer--mini .footer__base {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 .footer__grid { align-items: start; }
 .footer__brand { grid-column: span 4; }

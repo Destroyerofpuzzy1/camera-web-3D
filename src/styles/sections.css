@@ -720,10 +720,10 @@
     pointer-events: none;
     background: linear-gradient(
       0deg,
-      var(--ink) 0%,
-      rgba(8, 9, 11, 0.94) 30%,
-      rgba(8, 9, 11, 0.7) 46%,
-      rgba(8, 9, 11, 0) 66%
+      rgba(var(--deep-r, 8), var(--deep-g, 9), var(--deep-b, 11), 1) 0%,
+      rgba(var(--deep-r, 8), var(--deep-g, 9), var(--deep-b, 11), 0.94) 30%,
+      rgba(var(--deep-r, 8), var(--deep-g, 9), var(--deep-b, 11), 0.7) 46%,
+      rgba(var(--deep-r, 8), var(--deep-g, 9), var(--deep-b, 11), 0) 66%
     );
   }
   .on-paper .sticky:not(:has(.gate))::after {
@@ -841,3 +841,135 @@
 .buy__actions { gap: 0.5rem; }
 .buy__points { padding-top: 0.9rem; padding-bottom: 1.1rem; gap: 0.45rem; }
 .buy__eyebrow { margin-bottom: 0.75rem; }
+
+/* =============================================================================
+   01 Closer — camera push
+   ========================================================================== */
+
+.push__stick { align-items: center; }
+.push__grid {
+  width: 100%;
+  max-width: 30rem;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.push__word {
+  font-size: clamp(3.5rem, 9vw, 6.5rem);
+  line-height: 0.94;
+  letter-spacing: -0.02em;
+  margin: 0.3rem 0 0;
+  /* The colour identity is legible in the type too, not only the backdrop. */
+  color: rgb(var(--glow-r), var(--glow-g), var(--glow-b));
+  text-shadow: 0 0 42px rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.45);
+}
+.push__lede { max-width: 32ch; }
+
+@media (max-width: 1000px) {
+  .push__grid { max-width: 100%; }
+  .push__word { font-size: clamp(2.6rem, 13vw, 4.5rem); }
+}
+
+/* =============================================================================
+   02 Teardown — the centrepiece
+   Every direct child of the sticky is absolutely positioned, so none of them
+   compete for a flex slot: each fills the viewport and places its own content.
+   ========================================================================== */
+
+.tear__head {
+  position: absolute;
+  top: calc(var(--gutter) + 3.4rem);
+  left: 0;
+  right: 0;
+}
+
+/* Labels sit on the floor, left. The model owns the centre of frame, which is
+   also what survives a 9:16 crop. */
+.tear__labels {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--gutter) + 4.2rem);
+  height: 13.5rem;
+  pointer-events: none;
+}
+.tear__stage {
+  position: absolute;
+  bottom: 0;
+  left: var(--gutter);
+  right: var(--gutter);
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition: opacity 420ms var(--e-out), transform 520ms var(--e-out);
+}
+.tear__stage[data-on='true'] { opacity: 1; transform: none; }
+:root[data-motion='reduced'] .tear__stage { transition: opacity 1ms; }
+
+.tear__n {
+  display: block;
+  font-family: var(--ui);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--index);
+  margin-bottom: 0.5rem;
+}
+/* The teardown word can land on bright metal at any beat, so the label block
+   carries its own shadow rather than relying on the scene staying dark behind
+   it. Full-bleed and fading upward, so neither edge leaves a seam. */
+.tear__labels::before {
+  content: '';
+  position: absolute;
+  inset: -9rem -50vw -14rem -50vw;
+  background: linear-gradient(to top,
+    rgba(0, 0, 0, 0.74) 0%,
+    rgba(0, 0, 0, 0.46) 42%,
+    rgba(0, 0, 0, 0) 100%);
+  pointer-events: none;
+}
+
+.tear__word {
+  font-size: clamp(2.8rem, 8vw, 6.5rem);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--white);
+  text-shadow: 0 0 52px rgba(0, 0, 0, 0.6);
+}
+.tear__d {
+  display: block;
+  margin-top: 0.7rem;
+  font-family: var(--ui);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--silver);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
+}
+
+/* One tick per group, filling as the teardown opens. */
+.tear__ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--gutter) + 2.6rem);
+  display: flex;
+  gap: 5px;
+  padding-inline: var(--gutter);
+}
+.tear__tick {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background 420ms var(--e-soft);
+}
+.tear__tick[data-on='true'] { background: var(--index); }
+
+@media (max-width: 1000px) {
+  .tear__labels { height: 10.5rem; bottom: calc(var(--gutter) + 5rem); }
+  .tear__word { font-size: clamp(2.2rem, 12vw, 3.6rem); }
+  .tear__d { font-size: var(--t-micro); }
+  .tear__ticks { bottom: calc(var(--gutter) + 3.4rem); }
+}

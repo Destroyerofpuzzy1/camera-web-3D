@@ -1,13 +1,17 @@
 /* =============================================================================
-   STUDIO LIGHTING
+   STUDIO LIGHTING — RGB rig
    -----------------------------------------------------------------------------
-   A product photographer's set, built out of light shapes rather than an HDRI:
-   one long overhead softbox, two vertical strips that draw the edges of the
-   barrel, a cool kicker behind, and a low warm bounce.
+   Same shape as the original: one neutral key light for material readability,
+   plus a small number of dynamic lights for mood. What changed is what the
+   dynamic lights do — instead of crossfading a dark/paper studio, the rim and
+   fill lights now carry the section's electric colour identity, and a warm
+   bounce stays fixed so the underside of the body never goes dead black.
 
-   The `light` value from the choreography (0 dark, 1 bright) crossfades the
-   whole set. It drives the DOM backdrop on the same curve, so the page and the
-   object change mood together.
+   Still only four directional lights total, still one static Environment for
+   reflections (unchanged, undyed — recolouring baked lightformers per frame
+   would cost far more than it is worth). The RGB story is told mostly by the
+   DOM backdrop glow (see Chrome.jsx), which is nearly free; these lights exist
+   so the *object itself* also visibly carries the colour, per the brief.
    ========================================================================== */
 
 import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react'
@@ -15,61 +19,84 @@ import * as THREE from 'three'
 import { Environment, Lightformer } from '@react-three/drei'
 import { lerp } from '../lib/math.js'
 
-/** Per-light intensity at light = 0 and light = 1. */
-const MOODS = {
-  key: [12, 6.8],
-  rim: [9.5, 2.6],
-  fill: [0.5, 2.6],
-  bounce: [1.6, 1.1],
-  env: [0.85, 1.45],
-}
-
 const Studio = forwardRef(function Studio({ quality = 'high' }, ref) {
   const key = useRef()
   const rim = useRef()
   const fill = useRef()
   const bounce = useRef()
-  const group = useRef()
 
   const envColor = useMemo(() => new THREE.Color('#cfd6dd'), [])
+  const ambient = useRef()
+  // Scratch colour, reused every frame — no per-frame allocation.
+  const scratch = useMemo(() => ({ keyColor: new THREE.Color() }), [])
 
   useImperativeHandle(ref, () => ({
-    /** Called once per frame from Scene with the damped `light` value. */
-    setMood(t, scene) {
-      if (key.current) key.current.intensity = lerp(...MOODS.key, t)
-      if (rim.current) rim.current.intensity = lerp(...MOODS.rim, t)
-      if (fill.current) fill.current.intensity = lerp(...MOODS.fill, t)
-      if (bounce.current) bounce.current.intensity = lerp(...MOODS.bounce, t)
-      if (scene) scene.environmentIntensity = lerp(...MOODS.env, t)
-      // The rim cools as the set darkens; that blue edge is what separates a
-      // black object from a black background.
-      if (rim.current) rim.current.color.setHSL(0.56, lerp(0.34, 0.1, t), 0.62)
+    /**
+     * Called once per frame from Scene.
+     * @param t        0..1 intensity multiplier from the choreography
+     * @param world    the section's dominant colour (background, fill, fog)
+     * @param accent   the opposing colour (rim) — this is what sculpts
+     */
+    setMood(t, scene, world, accent) {
+      // Key stays mostly neutral: it is what keeps the machined edges and the
+      // knurling readable no matter how saturated the set gets. A fifth of
+      // the world colour mixed in stops it reading as a foreign white light.
+      if (key.current) {
+        scratch.keyColor.setRGB(1, 1, 1).lerp(world, 0.2)
+        key.current.color.copy(scratch.keyColor)
+        key.current.intensity = lerp(8, 13, t)
+      }
+
+      // Rim carries the ACCENT at full strength. Opposed to the background,
+      // it is the edge that separates a dark body from a saturated world.
+      if (rim.current) {
+        rim.current.color.copy(accent)
+        rim.current.intensity = lerp(7, 16, t)
+      }
+
+      // Fill and ambient carry the WORLD colour, so the shadow side of the
+      // body picks up the room it is standing in.
+      if (fill.current) {
+        fill.current.color.copy(world)
+        fill.current.intensity = lerp(1.2, 3.4, t)
+      }
+      if (ambient.current) {
+        ambient.current.color.copy(world)
+        ambient.current.intensity = lerp(0.35, 0.85, t)
+      }
+
+      if (bounce.current) bounce.current.intensity = lerp(1.1, 1.7, t)
+      if (scene) scene.environmentIntensity = lerp(0.85, 1.3, t)
     },
   }))
 
   return (
-    <group ref={group}>
+    <group>
+      {/* Ambient: the world colour, low. Keeps the shadow side inside the
+          colour world instead of falling to neutral black. */}
+      <ambientLight ref={ambient} intensity={0.4} color="#00efff" />
+
       {/* Key: high and slightly camera-right, raking across the top deck. */}
-      <directionalLight ref={key} position={[0.55, 0.78, 0.52]} intensity={11} color="#ffffff" />
+      <directionalLight ref={key} position={[0.55, 0.78, 0.52]} intensity={10} color="#f4f6f8" />
 
-      {/* Rim: low and behind, drawing the edge of the barrel and the finder. */}
-      <directionalLight ref={rim} position={[-0.62, 0.18, -0.58]} intensity={7} color="#7fa8cc" />
+      {/* Rim: low and behind, drawing the edge of the barrel and the finder.
+          Colour is set every frame from the choreography's rgb field. */}
+      <directionalLight ref={rim} position={[-0.62, 0.18, -0.58]} intensity={8} color="#00f5ff" />
 
-      {/* Fill: broad and frontal, only present when the set goes bright. */}
-      <directionalLight ref={fill} position={[-0.2, 0.3, 0.9]} intensity={0.5} color="#e8eef4" />
+      {/* Fill: broad and frontal, the complementary hue, always present but
+          gentle so it reads as bounce rather than a second key. */}
+      <directionalLight ref={fill} position={[-0.2, 0.3, 0.9]} intensity={1} color="#405bff" />
 
       {/* Bounce: warm, from below, so the underside is not a dead black. */}
-      <directionalLight ref={bounce} position={[0.1, -0.7, 0.35]} intensity={1.6} color="#c8b59c" />
+      <directionalLight ref={bounce} position={[0.1, -0.7, 0.35]} intensity={1.4} color="#c8b59c" />
 
       {/*
-        Reflection set. These never light the scene directly; they are what you
-        see *in* the metal and the glass. The two vertical strips are the ones
-        doing the real work on a cylindrical lens barrel.
+        Reflection set — unchanged, undyed. These never light the scene
+        directly; they are what you see *in* the metal and the glass.
       */}
       <Environment resolution={quality === 'low' ? 128 : 256} frames={1}>
         <color attach="background" args={['#05060a']} />
 
-        {/* Overhead softbox */}
         <Lightformer
           form="rect"
           intensity={5}
@@ -78,7 +105,6 @@ const Studio = forwardRef(function Studio({ quality = 'high' }, ref) {
           rotation={[Math.PI / 2, 0, 0]}
           scale={[6, 2.4, 1]}
         />
-        {/* Long vertical strip, camera right: the bright edge on the barrel */}
         <Lightformer
           form="rect"
           intensity={7}
@@ -87,7 +113,6 @@ const Studio = forwardRef(function Studio({ quality = 'high' }, ref) {
           rotation={[0, -Math.PI / 2.2, 0]}
           scale={[0.7, 5, 1]}
         />
-        {/* Narrower strip, camera left: the second, cooler edge */}
         <Lightformer
           form="rect"
           intensity={4}
@@ -96,7 +121,6 @@ const Studio = forwardRef(function Studio({ quality = 'high' }, ref) {
           rotation={[0, Math.PI / 2.2, 0]}
           scale={[0.42, 4.2, 1]}
         />
-        {/* Behind, low: separation on the rear chassis and the eyecup */}
         <Lightformer
           form="rect"
           intensity={3.2}
@@ -105,7 +129,6 @@ const Studio = forwardRef(function Studio({ quality = 'high' }, ref) {
           rotation={[0, Math.PI, 0]}
           scale={[3.2, 1.2, 1]}
         />
-        {/* Small hot circle: the specular pin in the front element */}
         <Lightformer
           form="circle"
           intensity={9}
@@ -114,7 +137,6 @@ const Studio = forwardRef(function Studio({ quality = 'high' }, ref) {
           rotation={[0, 0, 0]}
           scale={0.55}
         />
-        {/* Ground bounce */}
         <Lightformer
           form="rect"
           intensity={1.1}

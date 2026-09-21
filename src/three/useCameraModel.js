@@ -12,6 +12,7 @@ import { useGLTF } from '@react-three/drei'
 import {
   buildDisplayPivot,
   EXPLODE_OFFSETS,
+  EXPLODE_STAGES,
   FINISH_TARGETS,
   LENS_RIG,
   MATERIAL_GRADE,
@@ -90,15 +91,34 @@ export function useCameraModel(lowPower) {
     const displayRig = rigs.DISPLAY_RIG
     const displayPivot = displayRig ? buildDisplayPivot(root, displayRig) : null
 
-    /* --- Cache rest positions so explode can be a pure offset ------------- */
+    /* --- Cache rest positions so explode can be a pure offset -------------
+       Each target also carries the window inside the 0..1 explode value that
+       it actually moves in, which is what turns one scalar into a staged
+       cascade rather than everything opening at once. */
     const explodeTargets = []
     for (const [name, offset] of Object.entries(EXPLODE_OFFSETS)) {
       const rig = rigs[name] ?? root.getObjectByName(name)
       if (!rig) continue
+      const [from, to] = EXPLODE_STAGES[name] ?? [0, 1]
       explodeTargets.push({
         object: rig,
         rest: rig.position.clone(),
         offset: new THREE.Vector3(...offset),
+        from,
+        span: Math.max(0.0001, to - from),
+      })
+    }
+
+    /* --- The sensor lights up when the teardown reaches it ---------------- */
+    const sensorGlow = []
+    const sensorRig = rigs.SENSOR_RIG
+    if (sensorRig) {
+      sensorRig.traverse((node) => {
+        if (!node.isMesh) return
+        if (!/Sensor \| silicon/.test(node.material.name ?? '')) return
+        // Its own instance, so lighting it does not light anything else.
+        node.material = node.material.clone()
+        sensorGlow.push(node.material)
       })
     }
 
@@ -115,6 +135,7 @@ export function useCameraModel(lowPower) {
       lens,
       lensRest,
       finishParts,
+      sensorGlow,
       bounds,
       /** Centroid of the assembled instrument. Used as the rotation pivot. */
       pivot: bounds.getCenter(new THREE.Vector3()),

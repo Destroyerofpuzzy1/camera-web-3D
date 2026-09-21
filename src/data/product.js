@@ -132,12 +132,44 @@ const SPECS_RAW = [
 const COPY_RAW = {
   hero: {
     label: 'FRAME / 01',
-    statement: ['The camera', '*as an* instrument.'],
-    lede:
-      '61 megapixel full-frame sensor. Machined magnesium body. 8 stops of in-body stabilisation.',
+    statement: ['SEE IT', 'FROM EVERY', '*ANGLE.*'],
+    lede: 'A full-frame 3D camera model. Scroll to move around it.',
     ctaPrimary: 'Buy now',
-    ctaSecondary: 'See the build',
+    ctaSecondary: 'Explore ↓',
     scrollHint: 'Scroll',
+  },
+
+  /* --- New: the compressed RGB cut. `silhouette` through `specs` below are
+     the original ten-chapter copy, kept for its content (anchors.js and a
+     couple of quick callouts still read from it) but no longer rendered as
+     standalone sections. -------------------------------------------------- */
+  push: {
+    index: '01',
+    eyebrow: 'Camera push',
+    word: 'CLOSER.',
+    lede: 'One lens. Fourteen elements. Every control within reach.',
+    pins: [
+      { anchor: 'mount', title: 'FR bayonet mount', detail: '54 mm throat' },
+      { anchor: 'dials', title: 'Control dials', detail: '12 detents' },
+    ],
+  },
+
+  /* Nine beats, matched to the staged explode windows in three/rigRepair.js.
+     Every name here is a real rig in the model. */
+  teardown: {
+    index: '02',
+    eyebrow: 'Teardown',
+    stages: [
+      { n: '00', t: 'CLOSED', d: '211 parts, one datum' },
+      { n: '01', t: 'HOUSING', d: 'Hood and front barrel' },
+      { n: '02', t: 'OPTICS', d: '14 elements in 10 groups' },
+      { n: '03', t: 'BARREL', d: 'Focus, zoom and aperture rings' },
+      { n: '04', t: 'MOUNT', d: 'FR bayonet, 10 gold contacts' },
+      { n: '05', t: 'SENSOR', d: '61 MP full-frame BSI CMOS' },
+      { n: '06', t: 'CHASSIS', d: 'Machined magnesium, four sections' },
+      { n: '07', t: 'FINDER', d: 'Tilting display, 5.76 M-dot OLED' },
+      { n: '08', t: '211 PARTS', d: 'Every one on the same datum' },
+    ],
   },
 
   silhouette: {
@@ -331,24 +363,23 @@ const COPY_RAW = {
   },
 
   purchase: {
-    index: '08',
+    index: '03',
     eyebrow: 'Order',
-    positioning: '61 MP full-frame sensor, machined magnesium body. Two configurations.',
+    positioning: '61 MP full-frame. Machined magnesium body.',
   },
 
   close: {
-    statement: ['Built for', 'professional', 'image making.'],
-    lede: '61 MP full frame. 8 stops of stabilisation. Two-year warranty.',
+    statement: ['LOOK', 'CLOSER.'],
+    lede: 'One product. Every angle. See it again.',
     ctaPrimary: 'Buy now',
-    ctaSecondary: 'See full specification',
+    ctaSecondary: 'Watch again ↑',
   },
 }
 
 const NAV_RAW = [
-  { id: 'silhouette', label: 'Body' },
-  { id: 'lens', label: 'Optics' },
-  { id: 'exploded', label: 'Construction' },
-  { id: 'specs', label: 'Specification' },
+  { id: 'push', label: 'Exterior' },
+  { id: 'teardown', label: 'Teardown' },
+  { id: 'purchase', label: 'Order' },
 ]
 
 const FOOTER_RAW = {

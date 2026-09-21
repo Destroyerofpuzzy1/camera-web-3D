@@ -115,8 +115,23 @@ export function sample(scrollY, out) {
   out.explode = lerp(a.explode, b.explode, t)
   out.detach = lerp(a.detach, b.detach, t)
   out.tilt = lerp(a.tilt, b.tilt, t)
-  // Light gets its own gentle curve so the dark/paper crossfade never flickers.
-  out.light = lerp(a.light, b.light, ease('soft', raw))
+  out.emit = lerp(a.emit, b.emit, t)
+  // Light and colour get their own gentle curve so neither ever flickers.
+  const soft = ease('soft', raw)
+  out.light = lerp(a.light, b.light, soft)
+
+  // Colour is handed over as the two endpoints plus a blend factor rather than
+  // a finished value. Interpolating it here, channel by channel, would drag
+  // every transition through grey — blue to lime in RGB passes through mud.
+  // Scene blends these in HSL instead, so a transition travels around the
+  // wheel and stays saturated the whole way.
+  out.blend = soft
+  for (let i = 0; i < 3; i++) {
+    out.rgbA[i] = a.rgb[i]
+    out.rgbB[i] = b.rgb[i]
+    out.rgb2A[i] = a.rgb2[i]
+    out.rgb2B[i] = b.rgb2[i]
+  }
   return out
 }
 
@@ -131,4 +146,10 @@ export const createSample = () => ({
   detach: 0,
   tilt: 0,
   light: 0,
+  emit: 0,
+  blend: 0,
+  rgbA: [0, 0.937, 1],
+  rgbB: [0, 0.937, 1],
+  rgb2A: [0.478, 0.173, 1],
+  rgb2B: [0.478, 0.173, 1],
 })

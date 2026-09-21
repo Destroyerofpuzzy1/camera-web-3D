@@ -10,6 +10,9 @@ import { sectionTop } from '../lib/timeline.js'
 import Scrim from '../ui/Scrim.jsx'
 import Section from './Section.jsx'
 
+/* The sequence is short enough to be worth watching twice — the secondary CTA
+   scrolls back to the top rather than to a since-removed spec sheet. */
+
 const c = COPY.close
 
 export default function Close() {
@@ -44,11 +47,7 @@ export default function Close() {
               >
                 {c.ctaPrimary}
               </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => scrollTo(sectionTop('specs') + 2)}
-              >
+              <button type="button" className="btn" onClick={() => scrollTo(0)}>
                 {c.ctaSecondary}
               </button>
             </div>

@@ -1,19 +1,22 @@
 /* =============================================================================
-   FRAME / 01
+   FRAME / 01 — RGB SHOWCASE CUT
    -----------------------------------------------------------------------------
    Layer order, back to front:
 
-     backdrop   fixed DOM gradient, crossfaded by the choreography's `light`
+     backdrop   fixed DOM gradient — near-black base + two colour glows,
+                both driven live by the choreography's `rgb` field
      stage      fixed transparent WebGL canvas
      vignette   fixed DOM
      grain      fixed DOM
-     sections   scrolling DOM, with film gates that crop the canvas
+     sections   scrolling DOM: hero, push, teardown, purchase, close
      instrument the graticule overlay
      nav / cart fixed furniture
 
-   The canvas is transparent on purpose. Keeping the backdrop, the grain and the
-   vignette in the DOM is what lets the object composite into the page rather
-   than sit in a window on top of it.
+   Five sections, ~1140vh total, over half of it the teardown — see
+   data/chapters.js for why. The 3D scene,
+   the smooth scroller, the commerce store and the film-gate/callout system are
+   all unchanged from the original build; only the choreography, the lighting,
+   the backdrop and the section list were touched.
    ========================================================================== */
 
 import { Backdrop, BuyBar, CartDrawer, Footer, Loader, Nav } from './ui/Chrome.jsx'
@@ -21,13 +24,8 @@ import Instrument from './ui/Instrument.jsx'
 import Stage from './three/Stage.jsx'
 
 import Hero from './sections/Hero.jsx'
-import Silhouette from './sections/Silhouette.jsx'
-import Optics from './sections/Optics.jsx'
-import Sensor from './sections/Sensor.jsx'
-import Architecture from './sections/Architecture.jsx'
-import Handling from './sections/Handling.jsx'
-import Gallery from './sections/Gallery.jsx'
-import Specification from './sections/Specification.jsx'
+import Push from './sections/Push.jsx'
+import Teardown from './sections/Teardown.jsx'
 import Order from './sections/Order.jsx'
 import Close from './sections/Close.jsx'
 
@@ -45,8 +43,8 @@ export default function App() {
       <Backdrop />
       <Stage />
 
-      <a className="skip" href="#specs">
-        Skip to the specification
+      <a className="skip" href="#purchase">
+        Skip to order
       </a>
 
       <Nav />
@@ -54,13 +52,8 @@ export default function App() {
 
       <main id="top">
         <Hero />
-        <Silhouette />
-        <Optics />
-        <Sensor />
-        <Architecture />
-        <Handling />
-        <Gallery />
-        <Specification />
+        <Push />
+        <Teardown />
         <Order />
         <Close />
       </main>

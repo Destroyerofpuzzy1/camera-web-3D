@@ -13,8 +13,18 @@
 
 const ANGLE = { left: '90deg', right: '270deg', bottom: '0deg', top: '180deg' }
 
+/* An ink scrim is the shadow side of whatever colour the room currently is,
+   not flat black. Scaling the live world channels right down keeps it
+   dark enough to carry type while the hue still reads through it — otherwise
+   the scrim punches a black hole in the colour world on every sticky chapter. */
+const INK = [
+  'calc(var(--glow-r) * 0.28)',
+  'calc(var(--glow-g) * 0.28)',
+  'calc(var(--glow-b) * 0.28)',
+].join(', ')
+
 export default function Scrim({ side = 'left', tone = 'ink', reach = 62, strength = 0.94 }) {
-  const base = tone === 'paper' ? '231, 232, 229' : '8, 9, 11'
+  const base = tone === 'paper' ? '231, 232, 229' : INK
   const angle = ANGLE[side] ?? ANGLE.left
 
   return (

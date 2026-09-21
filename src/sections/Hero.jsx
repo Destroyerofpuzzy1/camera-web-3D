@@ -77,7 +77,7 @@ export default function Hero() {
               <button
                 type="button"
                 className="btn"
-                onClick={() => scrollTo(sectionTop('silhouette') + 2)}
+                onClick={() => scrollTo(sectionTop('push') + 2)}
               >
                 {c.ctaSecondary}
               </button>

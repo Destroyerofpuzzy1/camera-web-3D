@@ -43,6 +43,9 @@ const DAMPING = {
   fov: 5.0,
   model: 6.5,
   light: 3.2,
+  // Slower than everything else on purpose: colour is the one change that
+  // should read as a bleed across the whole set, not a snap.
+  rgb: 2.1,
 }
 
 export default function Scene({ lowPower, onReady }) {
@@ -64,6 +67,10 @@ export default function Scene({ lowPower, onReady }) {
       detach: 0,
       tilt: 0,
       light: 0,
+      emit: 0,
+      // Live colours, carried in HSL space between frames.
+      world: new THREE.Color(0x00efff),
+      accent: new THREE.Color(0x7a2cff),
     }),
     []
   )
@@ -76,6 +83,10 @@ export default function Scene({ lowPower, onReady }) {
       world: new THREE.Vector3(),
       quat: new THREE.Quaternion(),
       offset: new THREE.Vector3(),
+      part: new THREE.Vector3(),
+      primary: new THREE.Color(),
+      secondary: new THREE.Color(),
+      mixTo: new THREE.Color(),
     }),
     []
   )
@@ -122,6 +133,17 @@ export default function Scene({ lowPower, onReady }) {
     onReady?.()
   }, [onReady])
 
+  /* --- Coloured depth ----------------------------------------------------
+     Linear fog in the world colour. Near is set past the closest macro shot
+     so detail work stays clean, far past the widest teardown shot so the
+     back of the exploded fan sits in haze and the stack reads as deep.     */
+  useEffect(() => {
+    scene.fog = new THREE.Fog(0x000000, 0.6, 3.2)
+    return () => {
+      scene.fog = null
+    }
+  }, [scene])
+
   /* --- Finish: a real material swap on the deck and the dials ------------- */
   const finish = useStore((s) => s.finish)
   useEffect(() => {
@@ -159,6 +181,22 @@ export default function Scene({ lowPower, onReady }) {
     cur.detach = damp(cur.detach, S.detach, snap(DAMPING.model), dt)
     cur.tilt = damp(cur.tilt, S.tilt, snap(DAMPING.model), dt)
     cur.light = damp(cur.light, S.light, snap(DAMPING.light), dt)
+    cur.emit = damp(cur.emit, S.emit, snap(DAMPING.light), dt)
+
+    // Colour: blend the keyframe pair in HSL, then ease the live colour toward
+    // it in HSL as well. Both steps stay on the colour wheel, so a transition
+    // never passes through grey on its way from one world to the next.
+    tmp.primary.setRGB(S.rgbA[0], S.rgbA[1], S.rgbA[2])
+    tmp.mixTo.setRGB(S.rgbB[0], S.rgbB[1], S.rgbB[2])
+    tmp.primary.lerpHSL(tmp.mixTo, S.blend)
+
+    tmp.secondary.setRGB(S.rgb2A[0], S.rgb2A[1], S.rgb2A[2])
+    tmp.mixTo.setRGB(S.rgb2B[0], S.rgb2B[1], S.rgb2B[2])
+    tmp.secondary.lerpHSL(tmp.mixTo, S.blend)
+
+    const colourStep = reduced ? 1 : 1 - Math.exp(-DAMPING.rgb * dt)
+    cur.world.lerpHSL(tmp.primary, colourStep)
+    cur.accent.lerpHSL(tmp.secondary, colourStep)
 
     /* -- 2. Model state -------------------------------------------------- */
     const t = state.clock.elapsedTime
@@ -172,8 +210,15 @@ export default function Scene({ lowPower, onReady }) {
       spinGroup.current.position.y = idleRise
     }
 
+    // Staged explode. Each rig only moves inside its own window of the 0..1
+    // value (see EXPLODE_STAGES), smoothstepped so a part eases out of the
+    // body and eases to a stop rather than travelling at constant speed.
     for (const item of model.explodeTargets) {
-      item.object.position.copy(item.rest).addScaledVector(item.offset, cur.explode)
+      const p = clamp((cur.explode - item.from) / item.span)
+      item.object.position.addVectors(
+        item.rest,
+        tmp.part.copy(item.offset).multiplyScalar(p * p * (3 - 2 * p))
+      )
     }
     if (model.lens) {
       // Explode already moves the lens sub-rigs; detach moves the whole barrel.
@@ -255,9 +300,44 @@ export default function Scene({ lowPower, onReady }) {
 
     camera.updateMatrixWorld()
 
-    /* -- 4. Lighting ----------------------------------------------------- */
-    studio.current?.setMood(cur.light, scene)
-    document.documentElement.style.setProperty('--stage-light', cur.light.toFixed(3))
+    /* -- 4. Colour world --------------------------------------------------
+       Two authored colours drive everything: `rgb` is the world (background,
+       fog, fill, ambient) and `rgb2` is the accent (rim light, UI accents).
+       They are deliberately opposed — tinting the lights and the background
+       the same hue flattens the object; opposing them sculpts it.           */
+    studio.current?.setMood(cur.light, scene, cur.world, cur.accent)
+
+    // Atmospheric depth in the world colour. Near/far are set so a close
+    // macro is untouched and the far end of the exploded fan — which sits
+    // about 1.5 m out — carries a visible colour haze.
+    if (scene.fog) scene.fog.color.copy(cur.world)
+
+    // The sensor is the one part that lights itself, and only at the moment
+    // the teardown reaches it.
+    for (const material of model.sensorGlow) {
+      material.emissive.copy(cur.accent)
+      material.emissiveIntensity = cur.emit * 1.6
+    }
+
+    const root = document.documentElement.style
+    const a2 = [cur.accent.r, cur.accent.g, cur.accent.b].map((v) => Math.round(v * 255))
+    root.setProperty('--stage-light', cur.light.toFixed(3))
+    root.setProperty('--glow-r', Math.round(cur.world.r * 255))
+    root.setProperty('--glow-g', Math.round(cur.world.g * 255))
+    root.setProperty('--glow-b', Math.round(cur.world.b * 255))
+    root.setProperty('--glow2-r', a2[0])
+    root.setProperty('--glow2-g', a2[1])
+    root.setProperty('--glow2-b', a2[2])
+    // Every accent on the page — chapter ticks, callout dots, the brand mark —
+    // rides the same colour as the rim light.
+    root.setProperty('--index', `rgb(${a2[0]},${a2[1]},${a2[2]})`)
+    // The page's floor colour: the world at a fraction of its brightness. Every
+    // layer that used to bottom out in flat near-black — the page base, the
+    // type scrims — sits on this instead, so the darkest part of any section is
+    // still the section's own colour rather than a hole in it.
+    root.setProperty('--deep-r', Math.round(cur.world.r * 58))
+    root.setProperty('--deep-g', Math.round(cur.world.g * 58))
+    root.setProperty('--deep-b', Math.round(cur.world.b * 58))
 
     /* -- 5. Project anchors for the DOM overlay -------------------------- */
     for (const { id, marker } of anchors) {

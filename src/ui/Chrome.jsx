@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
-import { BRAND, COPY, FINISHES, FOOTER, KITS, NAV, price } from '../data/product.js'
+import { BRAND, FINISHES, FOOTER, KITS, NAV, price } from '../data/product.js'
 import { cartTotals, unitPrice, useStore } from '../lib/useStore.js'
 import { scrollTo } from '../lib/scroll.js'
 import { sectionTop } from '../lib/timeline.js'
@@ -21,7 +21,9 @@ export function Backdrop() {
     <>
       <div className="backdrop" aria-hidden="true">
         <div className="backdrop__layer backdrop__dark" />
-        <div className="backdrop__layer backdrop__light" />
+        <div className="backdrop__layer backdrop__glow" />
+        <div className="backdrop__layer backdrop__glow2" />
+        <div className="backdrop__layer backdrop__depth" />
       </div>
       <div className="vignette" aria-hidden="true" />
       {quality === 'high' ? <div className="grain" aria-hidden="true" /> : null}
@@ -258,36 +260,13 @@ export function CartDrawer() {
 
 /* --- Footer --------------------------------------------------------------- */
 
+/* Deliberately tiny — this page ends on the close section, not the footer. */
 export function Footer() {
   return (
-    <footer className="footer">
-      <div className="shell grid12 footer__grid">
-        <div className="footer__brand">
-          <div className="label">{BRAND.wordmark}</div>
-          <p className="prose" style={{ marginTop: '1rem', maxWidth: '26ch' }}>
-            {COPY.close.lede}
-          </p>
-        </div>
-        {FOOTER.columns.map((col) => (
-          <div className="footer__col" key={col.t}>
-            <div className="label label-sm">{col.t}</div>
-            <ul>
-              {col.links.map((l) => (
-                <li key={l}>
-                  <a href="#top" onClick={(e) => e.preventDefault()}>
-                    {l}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-      <div className="shell">
-        <div className="footer__base">
-          <span className="label label-sm">{FOOTER.legal}</span>
-          <span className="label label-sm">{FOOTER.note}</span>
-        </div>
+    <footer className="footer footer--mini">
+      <div className="shell footer__base">
+        <span className="label label-sm">{FOOTER.legal}</span>
+        <span className="label label-sm">{FOOTER.note}</span>
       </div>
     </footer>
   )

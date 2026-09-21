@@ -11,7 +11,10 @@ html {
 
 body {
   margin: 0;
-  background: var(--ink);
+  /* The page floor travels with the colour world (published per frame by
+     Scene). --ink is the fallback for the first paint and for reduced-motion
+     starts, before the render loop has published anything. */
+  background: rgb(var(--deep-r, 8), var(--deep-g, 9), var(--deep-b, 11));
   color: var(--silver);
   font-family: var(--sans);
   font-size: var(--t-body);
